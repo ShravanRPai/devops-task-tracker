@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-api-deployment
+  labels:
+    app: task-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: task-api
+  template:
+    metadata:
+      labels:
+        app: task-api
+    spec:
+      containers:
+        - name: task-api
+          image: task-weightage-api:v1.0
+          imagePullPolicy: Never # Crucial: tells K8s to use the local image, not DockerHub
+          ports:
+            - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-api-service
+spec:
+  type: NodePort # Opens a port on the VMs so Windows can access it
+  selector:
+    app: task-api
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+      nodePort: 30080
