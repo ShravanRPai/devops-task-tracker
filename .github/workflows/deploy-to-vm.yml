@@ -3,7 +3,7 @@ name: Continuous Deployment to be done on local cluster
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy-to-local-cluster:
