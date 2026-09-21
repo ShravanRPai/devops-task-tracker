@@ -1,0 +1,29 @@
+name: Continuous Deployment to be done on local cluster
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-to-local-cluster:
+    runs-on: self-hosted # Tells GitHub to use your Master node container
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Container Image
+        # Uses sudo to access the mounted containerd socket
+        run: |
+          sudo nerdctl build -t 192.168.182.129:5000/task-weightage-api:${{ github.sha }} .
+
+      - name: Push to Local Registry
+        run: |
+          sudo nerdctl --insecure-registry push 192.168.182.129:5000/task-weightage-api:${{ github.sha }}
+
+      - name: Deploy to Kubernetes
+        # Replaces the placeholder image with the newly built one, then applies via Kubeconfig
+        run: |
+          sed -i "s|image: .*|image: 192.168.182.129:5000/task-weightage-api:${{ github.sha }}|g" k8s-manifest.yaml
+          kubectl apply -f k8s-manifest.yaml

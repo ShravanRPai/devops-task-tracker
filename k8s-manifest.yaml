@@ -17,7 +17,7 @@ spec:
       containers:
         - name: task-api
           image: task-weightage-api:v1.0
-          imagePullPolicy: Never # Crucial: tells K8s to use the local image, not DockerHub
+          imagePullPolicy: Always # Crucial: tells K8s to always pull using the local registry
           ports:
             - containerPort: 8000
 ---
