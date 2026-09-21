@@ -29,7 +29,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest ./test/main.py
+          pytest test_main.py
 
       # Adding image build step to validate Dockerfile
       - name: Build container image
