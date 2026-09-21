@@ -1,0 +1,37 @@
+name: Continuous Integration with app functionality testing
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install httpx pytest
+
+      - name: Run unit tests
+        run: |
+          pytest ./test/main.py
+
+      # Adding image build step to validate Dockerfile
+      - name: Build container image
+        run: |
+          docker build -t task-weightage-api:${{ github.sha }} .
