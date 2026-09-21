@@ -6,7 +6,7 @@ client = TestClient(app)
 def test_health_check():
 	response = client.get("/")
 	assert response.status_code == 200
-	assert response.json() == {"status": "healthy", "service": "task-weightage-api"}
+	assert response.json() == {"status": "healthy", "message": "Server is up and running."}
 
 
 def test_create_task():
