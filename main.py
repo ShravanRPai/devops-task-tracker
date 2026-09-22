@@ -10,6 +10,7 @@ Supports:
 
 
 # Imports
+from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
@@ -44,9 +45,13 @@ class TaskDB(Base):
 	category = Column(String, default="General")
 
 
-if __name__ == "__main__":
-	# Initialize all tables
+# Lifespan context manager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+	# Startup event: Initialize the database tables if they don't exist
 	Base.metadata.create_all(bind=engine)
+	yield
+	# Teardown event: You can add cleanup code here if needed later
 
 
 # App object
@@ -54,6 +59,7 @@ app = FastAPI(
 	title="Task Weightage API",
 	version="1.0.0",
 	description="Backend API for tracking tasks and calculating dynamic weightage distribution",
+	lifespan=lifespan,
 )
 
 
