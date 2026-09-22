@@ -21,7 +21,7 @@ import os
 # PostgreSQL connection
 DB_USER = os.getenv("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
-DB_HOST = os.getenv("POSTGRES_HOST", "postgres-service")
+DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_NAME = os.getenv("POSTGRES_DB", "tasktracker")
 
 # Construct the SQLAlchemy URL
@@ -44,8 +44,9 @@ class TaskDB(Base):
 	category = Column(String, default="General")
 
 
-# Initialize all tables
-Base.metadata.create_all(bind=engine)
+if __name__ == "__main__":
+	# Initialize all tables
+	Base.metadata.create_all(bind=engine)
 
 
 # App object
