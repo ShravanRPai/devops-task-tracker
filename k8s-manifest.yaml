@@ -20,6 +20,24 @@ spec:
           imagePullPolicy: Always # Crucial: tells K8s to always pull using the local registry
           ports:
             - containerPort: 8000
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials  # Must match the metadata.name in your secret YAML
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_DB
+            - name: POSTGRES_HOST
+              value: "postgres-service"
 ---
 apiVersion: v1
 kind: Service

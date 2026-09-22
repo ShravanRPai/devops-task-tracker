@@ -13,6 +13,24 @@ Supports:
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import os
+
+
+# PostgreSQL connection
+# Fetch variables injected by Kubernetes, with fallback defaults for local Windows testing
+DB_USER = os.getenv("POSTGRES_USER", "postgres")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
+DB_HOST = os.getenv("POSTGRES_HOST", "postgres-service") # Matches your K8s Service name
+DB_NAME = os.getenv("POSTGRES_DB", "tasktracker")
+
+# Construct the SQLAlchemy URL
+SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+
+# Create engine object and bind to session
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 # App object
