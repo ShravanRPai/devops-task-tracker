@@ -29,14 +29,14 @@ spec:
               memory: "128Mi"  # Guaranteed memory
             limits:
               cpu: "250m"      # Max CPU allowed
-              memory: "256Mi"  # K8s will kill the pod if it exceeds this
+              memory: "512Mi"  # K8s will kill the pod if it exceeds this
 
           # 2. Liveness Probe (Restarts the pod if it hangs)
           livenessProbe:
             httpGet:
               path: /
               port: 8000
-            initialDelaySeconds: 5  # Give the app 5s to boot before checking
+            initialDelaySeconds: 15  # Give the app 5s to boot before checking
             periodSeconds: 15       # Check every 15s
             timeoutSeconds: 2       # If no response in 2s, it fails
             failureThreshold: 3     # Restart pod after 3 consecutive failures
@@ -46,7 +46,7 @@ spec:
             httpGet:
               path: /
               port: 8000
-            initialDelaySeconds: 2
+            initialDelaySeconds: 10
             periodSeconds: 5
             successThreshold: 1     # Needs 1 success to start receiving traffic
 
