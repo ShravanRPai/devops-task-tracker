@@ -26,7 +26,7 @@ DB_HOST = os.getenv("POSTGRES_HOST", "postgres-service") # Matches your K8s Serv
 DB_NAME = os.getenv("POSTGRES_DB", "tasktracker")
 
 # Construct the SQLAlchemy URL
-SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
 
 # Create engine object and bind to session
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
