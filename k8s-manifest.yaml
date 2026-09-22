@@ -5,7 +5,7 @@ metadata:
   labels:
     app: task-api
 spec:
-  revisionHistoryLimit: 2
+  revisionHistoryLimit: 2 # Keep only previous 2 revisions (replica sets)
   replicas: 2
   selector:
     matchLabels:
@@ -21,6 +21,36 @@ spec:
           imagePullPolicy: Always # Crucial: tells K8s to always pull using the local registry
           ports:
             - containerPort: 8000
+
+          # 1. Resource Boundaries
+          resources:
+            requests:
+              cpu: "100m"      # 1/10th of a core
+              memory: "128Mi"  # Guaranteed memory
+            limits:
+              cpu: "250m"      # Max CPU allowed
+              memory: "256Mi"  # K8s will kill the pod if it exceeds this
+
+          # 2. Liveness Probe (Restarts the pod if it hangs)
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5  # Give the app 5s to boot before checking
+            periodSeconds: 15       # Check every 15s
+            timeoutSeconds: 2       # If no response in 2s, it fails
+            failureThreshold: 3     # Restart pod after 3 consecutive failures
+
+          # 3. Readiness Probe (Stops traffic routing if it's busy/starting)
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            successThreshold: 1     # Needs 1 success to start receiving traffic
+
+          # PostgreSQL connection specific variables
           env:
             - name: POSTGRES_USER
               valueFrom:
@@ -38,7 +68,7 @@ spec:
                   name: postgres-credentials
                   key: POSTGRES_DB
             - name: POSTGRES_HOST
-              value: "postgres-service"
+              value: "postgres-service" # Kubernetes translates this automatically
 ---
 apiVersion: v1
 kind: Service
