@@ -11,18 +11,17 @@ Supports:
 
 # Imports
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 import os
 
 
 # PostgreSQL connection
-# Fetch variables injected by Kubernetes, with fallback defaults for local Windows testing
 DB_USER = os.getenv("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
-DB_HOST = os.getenv("POSTGRES_HOST", "postgres-service") # Matches your K8s Service name
+DB_HOST = os.getenv("POSTGRES_HOST", "postgres-service")
 DB_NAME = os.getenv("POSTGRES_DB", "tasktracker")
 
 # Construct the SQLAlchemy URL
@@ -31,6 +30,22 @@ SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOS
 # Create engine object and bind to session
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+# SQLAlchemy ORM Model
+class TaskDB(Base):
+	__tablename__ = "tasks"
+	
+	id = Column(Integer, primary_key=True, index=True)
+	title = Column(String, nullable=False)
+	weightage = Column(Float, nullable=False)
+	completed = Column(Boolean, default=False)
+	category = Column(String, default="General")
+
+
+# Initialize all tables
+Base.metadata.create_all(bind=engine)
 
 
 # App object
@@ -41,26 +56,33 @@ app = FastAPI(
 )
 
 
-# In-memory data store
-tasks_db: List["Task"] = []
-
-
-# Task object
+# Pydantic Schemas
 class Task(BaseModel):
 	id: int
 	title: str
 	weightage: float = Field(..., gt=0, le=100, description="Task weightage between 0 and 100")
 	completed: bool = False
 	category: Optional[str] = "General"
+	
+	class Config:
+		from_attributes = True
 
 
-# Weightage object
 class WeightageMetrics(BaseModel):
 	total_tasks: int
 	completed_tasks: int
 	total_weightage: float
 	completed_weightage: float
 	completion_percentage: float
+
+
+# Database Dependency
+def get_db():
+	db = SessionLocal()
+	try:
+		yield db
+	finally:
+		db.close()
 
 
 # Endpoints
@@ -70,34 +92,40 @@ def health_check():
 
 
 @app.get("/tasks/", response_model=List[Task], tags=["Tasks"])
-def list_tasks():
-	return tasks_db
+def list_tasks(db: Session = Depends(get_db)):
+	return db.query(TaskDB).all()
 
 
-@app.get("/tasks/{task_id}", response_model=Task|None, tags=["Tasks"])
-def get_task(task_id: int):
-	return tasks_db[task_id] if len(tasks_db) > task_id else None
+@app.get("/tasks/{task_id}", response_model=Task | None, tags=["Tasks"])
+def get_task(task_id: int, db: Session = Depends(get_db)):
+	return db.query(TaskDB).filter(TaskDB.id == task_id).first()
 
 
 @app.post("/tasks/", response_model=Task, tags=["Tasks"])
-def create_task(task: Task):
-	if any(t.id == task.id for t in tasks_db):
+def create_task(task: Task, db: Session = Depends(get_db)):
+	if db.query(TaskDB).filter(TaskDB.id == task.id).first():
 		raise HTTPException(status_code=400, detail=f"Task with id {task.id} already exists")
-	tasks_db.append(task)
-	return task
+	
+	db_task = TaskDB(**task.model_dump())
+	db.add(db_task)
+	db.commit()
+	db.refresh(db_task)
+	return db_task
 
 
 @app.get("/weightage/", response_model=WeightageMetrics, tags=["Analytics"])
-def calculate_weightage():
-	if not tasks_db:
+def calculate_weightage(db: Session = Depends(get_db)):
+	tasks = db.query(TaskDB).all()
+	
+	if not tasks:
 		return WeightageMetrics(
 			total_tasks=0, completed_tasks=0, total_weightage=0.0, completed_weightage=0.0, completion_percentage=0.0
 		)
 	
-	total_tasks = len(tasks_db)
-	completed_tasks = sum(1 for task in tasks_db if task.completed)
-	total_weightage = sum(task.weightage for task in tasks_db)
-	completed_weightage = sum(task.weightage for task in tasks_db if task.completed)
+	total_tasks = len(tasks)
+	completed_tasks = sum(1 for task in tasks if task.completed)
+	total_weightage = sum(task.weightage for task in tasks)
+	completed_weightage = sum(task.weightage for task in tasks if task.completed)
 	
 	completion_percentage = (completed_weightage / total_weightage) * 100 if total_weightage > 0 else 0.0
 	
